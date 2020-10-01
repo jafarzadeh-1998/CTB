@@ -8,7 +8,7 @@ from config import bot_token ,URL
 
 global bot
 global TOKEN
-TOKEN = "1314307251:AAFKpUau4FFXIAxBLh77qqvwgMIylnvVVyE"
+TOKEN = bot_token
 bot = telegram.Bot(token=TOKEN)
 
 app = Flask(__name__)
