@@ -4,14 +4,53 @@ import re
 from flask import Flask, request
 import telegram
 from config import bot_token ,URL
+import requests
 
 
 global bot
 global TOKEN
+global COMMANDS
 TOKEN = bot_token
 bot = telegram.Bot(token=TOKEN)
 
+# URL = "https://chamranteam.pythonanywhere.com/"
 app = Flask(__name__)
+
+def startHandler(chat_id):
+    bot_welcome = """
+       به بات تلگرامی چمران تیم خوش آمدید.
+       """
+    bot.sendMessage(chat_id=chat_id, text=bot_welcome)
+    return 'ok'
+
+def projectNameHandler(chat_id, projectId):
+    # response = requests.get("", params={"project_id": projectId})
+    response = requests.get("https://chamranteam.ir/api/project_name/{}".format(projectId))
+    if response.status_code == 200:
+        projectInfo = response.json()
+        bot.sendMessage(chat_id=chat_id, text=projectInfo['project_name'])
+        return 'ok'
+    bot.sendMessage(chat_id=chat_id, text="لطفا مجدداٌ تلاش کنید.")
+    return "went wrong"
+
+def searchUsernameHandler(chat_id, keyword):
+    # response = requests.get("https://chamranteam.ir/api/", params={"keyword": keyword})
+    response = requests.get("https://chamranteam.ir/api/search_username/{}".format(keyword))
+    print(response.content)
+    if response.status_code == 200:
+        userInfo = response.json()
+        print(userInfo)
+        bot.sendMessage(chat_id=chat_id, text=userInfo['fullname'])
+        return 'ok'
+    bot.sendMessage(chat_id=chat_id, text="لطفا مجدداٌ تلاش کنید.")
+    return "went wrong"
+
+
+COMMANDS = {
+    "/start": startHandler,
+    "/project_name": projectNameHandler,
+    "/search_username": searchUsernameHandler,
+}
 
 @app.route('/', methods=['POST', 'GET'])
 def respond():
@@ -23,15 +62,16 @@ def respond():
 
    # Telegram understands UTF-8, so encode text for unicode compatibility
    text = update.message.text.encode('utf-8').decode()
+   if "کد پروژه" in text:
+       projectId = text[text.find(":")+2:]
+       projectNameHandler(chat_id=chat_id, projectId=projectId)
+   elif "شناسه" in text:
+      keyword = text[text.find(":")+2:]
+      searchUsernameHandler(chat_id=chat_id, keyword=keyword)
 
    # the first time you chat with the bot AKA the welcoming message
-   if text == "/start":
-       # print the welcoming message
-       bot_welcome = """
-       به بات تلگرامی جمران تیم خوش آمدید.
-       """
-       # send the welcoming message
-       bot.sendMessage(chat_id=chat_id, text=bot_welcome)
+   elif text == "/start":
+       startHandler(chat_id=chat_id)
 
    else:
        try:
