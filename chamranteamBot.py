@@ -6,6 +6,8 @@ import telegram
 from config import bot_token ,URL
 import requests
 
+from uuid import uuid4
+
 
 global bot
 global TOKEN
@@ -44,6 +46,29 @@ def searchUsernameHandler(chat_id, keyword):
         return 'ok'
     bot.sendMessage(chat_id=chat_id, text="لطفا مجدداٌ تلاش کنید.")
     return "went wrong"
+from telegram.utils.helpers import escape_markdown
+
+def inlineQuery(update):
+    projectId = update.inline_query.query
+    print(projectId)
+    response = requests.get("https://chamranteam.ir/api/project_name/{}".format(projectId))
+    if response.status_code == 200:
+        projectInfo = response.json()
+        if projectInfo['creator_photo'] is not "None":
+            projectInfo['creator_photo'] = "https://chamranteam.ir" + projectInfo['creator_photo']
+        query = update.inline_query.query
+        results = [
+            telegram.InlineQueryResultArticle(
+                id=uuid4(),
+                title=projectInfo['creator'],
+                description=projectInfo['project_name'],
+                thumb_url=projectInfo['creator_photo'],
+                input_message_content=telegram.InputTextMessageContent(
+                    projectInfo['project_name'])),]
+        update.inline_query.answer(results, cache_time=15)
+    else:
+        print(response.json())
+    return
 
 
 COMMANDS = {
@@ -54,38 +79,42 @@ COMMANDS = {
 
 @app.route('/', methods=['POST', 'GET'])
 def respond():
-   # retrieve the message in JSON and then transform it to Telegram object   
-   update = telegram.Update.de_json(request.get_json(force=True), bot)
+   # retrieve the message in JSON and then transform it to Telegram object
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    try:
+        inlineQuery(update)
+        return 'ok'
+    except:
+        print(update)
+        return 'ok'
+    chat_id = update.message.chat.id
+    msg_id = update.message.message_id
 
-   chat_id = update.message.chat.id
-   msg_id = update.message.message_id   
+    # Telegram understands UTF-8, so encode text for unicode compatibility
+    text = update.message.text.encode('utf-8').decode()
+    if "کد پروژه" in text:
+        projectId = text[text.find(":")+2:]
+        projectNameHandler(chat_id=chat_id, projectId=projectId)
+    elif "شناسه" in text:
+        keyword = text[text.find(":")+2:]
+        searchUsernameHandler(chat_id=chat_id, keyword=keyword)
 
-   # Telegram understands UTF-8, so encode text for unicode compatibility
-   text = update.message.text.encode('utf-8').decode()
-   if "کد پروژه" in text:
-       projectId = text[text.find(":")+2:]
-       projectNameHandler(chat_id=chat_id, projectId=projectId)
-   elif "شناسه" in text:
-      keyword = text[text.find(":")+2:]
-      searchUsernameHandler(chat_id=chat_id, keyword=keyword)
+    # the first time you chat with the bot AKA the welcoming message
+    elif text == "/start":
+        startHandler(chat_id=chat_id)
 
-   # the first time you chat with the bot AKA the welcoming message
-   elif text == "/start":
-       startHandler(chat_id=chat_id)
+    else:
+        try:
+            # clear the message we got from any non alphabets
+            text = re.sub(r"\W", "_", text)
+            url = "https://api.adorable.io/avatars/285/{}.png".format(text.strip())
+            # reply with a photo to the name the user sent,
+            # note that you can send photos by url and telegram will fetch it for you
+            bot.sendPhoto(chat_id=chat_id, photo=url, reply_to_message_id=msg_id)
+        except Exception:
+            bot.sendMessage(chat_id=chat_id, text="There was a problem in the name you used, please enter different name", reply_to_message_id=msg_id)
 
-   else:
-       try:
-           # clear the message we got from any non alphabets
-           text = re.sub(r"\W", "_", text)
-           url = "https://api.adorable.io/avatars/285/{}.png".format(text.strip())
-           # reply with a photo to the name the user sent,
-           # note that you can send photos by url and telegram will fetch it for you
-           bot.sendPhoto(chat_id=chat_id, photo=url, reply_to_message_id=msg_id)
-       except Exception:
-           # if things went wrong
-           bot.sendMessage(chat_id=chat_id, text="There was a problem in the name you used, please enter different name", reply_to_message_id=msg_id)
-
-   return 'ok'
+    return 'ok'
 
 @app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
