@@ -37,8 +37,10 @@ def get_Webhook_info(request):
        return HttpResponse("<h3>get webhook Information failed</h3>")
 
 def inlineQuery(update):
-    projectId = update.inline_query.query
-    print(projectId)
+    try:
+        projectId = update.inline_query.query
+    except:
+        raise Exception()
     # response = requests.get("https://chamranteam.ir/api/project_name/{}".format(projectId))
     try:
         project = models.Project.objects.get(code=projectId)
@@ -58,6 +60,22 @@ def inlineQuery(update):
     update.inline_query.answer(results, cache_time=15)
     return
 
+def myColleagueHandler(chat_id):
+    project = models.Project.objects.get(group_id=chat_id)
+    context = ""
+    context += "مرکز پژوهشی : \n\t{}\n".format(project.industry_creator.fullname)
+    context += "اساتید : \n"
+    for expert in project.expert_accepted.all():
+        context += "\t{}\n".format(expert.fullname)
+    context += "پژوهشگران : \n"
+    for researcher in project.researcher_accepted.all():
+        context += "\t{}\n".format(researcher.fullname)
+    bot.sendMessage(chat_id=chat_id, text=context)
+
+
+def allTaskHandler(chat_id):
+    return
+
 def startHandler(chat_id):
     bot_welcome = """
        به بات تلگرامی چمران تیم خوش آمدید.
@@ -74,19 +92,29 @@ def telegramHandler(request):
     # print(update)
     try:
         inlineQuery(update)
-        print(update)
         return HttpResponse('ok')
     except Exception as exc:
-        # pass
-        print("---------------------------------------+++++++++++")
-        print(exc)
-        return HttpResponse('ok')
-    chat_id = update.message.chat.id
-    msg_id = update.message.message_id
+        pass
+        # print("---------------------------------------+++++++++++++++++++++++++++++++++")
+        # print(exc)
+        # return HttpResponse('ok')
+    try:
+        chat_id = update.message.chat.id
+        msg_id = update.message.message_id
+    except:
+        return HttpResponse("ok")
 
-    # Telegram understands UTF-8, so encode text for unicode compatibility
-    return HttpResponse('ok')
+    # Telegram understands UTF-8, so encode text for unicode compatibility    
     text = update.message.text.encode('utf-8').decode()
+    if update.message.entities:
+        if update.message.entities[0].type == "bot_command":
+            command = text[update.message.entities[0].offset:update.message.entities[0].offset+update.message.entities[0].length]
+            if text == "/start":
+                startHandler(chat_id=chat_id)
+            elif text == "/all_task":
+                allTaskHandler(chat_id=chat_id)
+            elif text == "/my_colleague":
+                myColleagueHandler(chat_id=chat_id)
     if "کد پروژه" in text:
         projectId = text[text.find(":")+2:]
         # projectNameHandler(chat_id=chat_id, projectId=projectId)
@@ -205,3 +233,40 @@ def addCard(request):
         return HttpResponse("OK")
     except:
         return HttpResponse("ERROR HAPPEND", status=503)
+
+
+# {'update_id': 743953184,
+#  'message': {
+#      'message_id': 208,
+#      'date': 1602089767,
+#      'chat': {
+#          'id': -408071125,
+#          'type': 'group',
+#          'title': 'Test',
+#          'all_members_are_administrators': True
+#          },
+#      'text': 'خهه',
+#      'entities': [],
+#      'caption_entities': [], 
+#      'photo': [], 
+#      'new_chat_members': [], 
+#      'new_chat_photo': [], 
+#      'from': {
+#          'id': 271373138, 
+#          'first_name': 'Ali', 
+#          'is_bot': False, 
+#          'last_name': 'Jafarzadeh', 'username': 'ali_jafarzadeh1998', 'language_code':'en'}}}
+
+
+# {'update_id': 743953185,
+#  'message': {
+#      'message_id': 209,
+#      'date': 1602089796, 
+#      'chat': {
+#          'id': -408071125, 
+#          'type': 'group', 
+#          'title': 'Test', 
+#          'all_members_are_administrators': True
+#          },
+#      'text': '/aloooooooooo',
+#      'entities': [{'type': 'bot_command', 'offset': 0, 'length': 13}], 'caption_entities': [], 'photo': [], 'new_chat_members': [], 'new_chat_photo': [], 'delete_chat_photo': False, 'group_chat_created': False, 'supergroup_chat_created': False, 'channel_chat_created': False, 'from': {'id': 271373138, 'first_name': 'Ali', 'is_bot': False, 'last_name': 'Jafarzadeh', 'username': 'ali_jafarzadeh1998', 'language_code': 'en'}}}
