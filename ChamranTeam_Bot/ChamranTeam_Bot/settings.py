@@ -25,7 +25,7 @@ SECRET_KEY = '*ggeib@jx#%6(sf_b_hfy#1f)%*o^%g4e4^*abme4j)7ure@49'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['ali-ea10c8b8.localhost.run', 'www.ali-ea10c8b8.localhost.run', "127.0.0.1"]
+ALLOWED_HOSTS = ['chamranteam.pythonanywhere.com', 'www.chamranteam.pythonanywhere.com', "127.0.0.1"]
 
 
 # Application definition
@@ -118,4 +118,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static"), ]
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'

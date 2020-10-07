@@ -38,13 +38,15 @@ def get_Webhook_info(request):
 
 def inlineQuery(update):
     projectId = update.inline_query.query
+    print(projectId)
     # response = requests.get("https://chamranteam.ir/api/project_name/{}".format(projectId))
     try:
         project = models.Project.objects.get(code=projectId)
     except:
-        print("There isn't project with this code : {}".format(projectId))
+        print("There isn't any project with this code : {}".format(projectId))
         return
     query = update.inline_query.query
+    print("-----PROJECT----- : ",project)
     results = [
         telegram.InlineQueryResultArticle(
             id=uuid.uuid4(),
@@ -69,18 +71,21 @@ def telegramHandler(request):
     if request.method == "GET":
        return HttpResponse("GET Method is OK")
     update = telegram.Update.de_json(json.loads(request.body), bot)
-    print(update)
+    # print(update)
     try:
         inlineQuery(update)
+        print(update)
         return HttpResponse('ok')
-    except:
-        pass
-        # print(update)
-        # return HttpResponse('ok')
+    except Exception as exc:
+        # pass
+        print("---------------------------------------+++++++++++")
+        print(exc)
+        return HttpResponse('ok')
     chat_id = update.message.chat.id
     msg_id = update.message.message_id
 
     # Telegram understands UTF-8, so encode text for unicode compatibility
+    return HttpResponse('ok')
     text = update.message.text.encode('utf-8').decode()
     if "کد پروژه" in text:
         projectId = text[text.find(":")+2:]
@@ -140,7 +145,7 @@ def addProject(request):
 
     for researcherInfo in inputData['researchers']:
         project.researcher_accepted.add(add_user(researcherInfo))
-        
+
     return HttpResponse("OK")
     # return JsonResponse(data={'success': "success"})
 
@@ -162,6 +167,8 @@ def updateUser(request):
 def addTask(request):
     try:
         inputData = json.loads(request.body)
+        print("----------------------ADD TASK-------------------------")
+        print(inputData)
         project = models.Project.objects.get(id=inputData["id"])
         newTask = models.Task.objects.create(description=inputData['description'],
                                             project=project,
@@ -171,7 +178,7 @@ def addTask(request):
             user = models.User.objects.get(username=username)
             newTask.involved_user.add(user)
             involved_user += user.fullname + "\n"
-        
+
         text = """وظیفه {title} به {involved_user} محول شده و لازم است تا تاریخ {deadline} انجام شود.
 برای اطلاعات بیشتر می‌توانید دکمه «مشاهده پروژه» در زیر این پیام را بزنید. """.\
                 format({"title":newTask.description,
@@ -186,6 +193,8 @@ def addTask(request):
 def addCard(request):
     try:
         inputData = json.loads(request.body)
+        print("----------------------ADD CARD-------------------------")
+        print(inputData)
         project = models.Project.objects.get(id=inputData['id'])
         newCard = models.Card.objects.create(title=inputData['title'],
                                             project=project,
