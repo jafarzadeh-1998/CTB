@@ -25,7 +25,7 @@ SECRET_KEY = '*ggeib@jx#%6(sf_b_hfy#1f)%*o^%g4e4^*abme4j)7ure@49'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['ali-ea10c8b8.localhost.run', 'www.ali-ea10c8b8.localhost.run', "127.0.0.1"]
 
 
 # Application definition

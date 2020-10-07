@@ -3,7 +3,7 @@ from django.db import models
 import uuid
 
 class User(models.Model):
-    username = models.EmailField(verbose_name="ایمیل", )
+    username = models.EmailField(verbose_name="ایمیل", max_length=256 )
     fullname = models.CharField(max_length=128, verbose_name="نام و نام خانوادگی")
     photo_url = models.CharField(verbose_name="آدرس پروفایل", max_length=128, default="None")
 
@@ -28,34 +28,20 @@ class Project(models.Model):
     def __str__(self):
         return self.english_title
 
+class Task(models.Model):
+    description = models.TextField(verbose_name="توضیحات", null=True, blank=True)
+    project = models.ForeignKey(Project, verbose_name="پروژه مرتبط", on_delete=models.CASCADE)
+    involved_user = models.ManyToManyField(User, verbose_name="کاربران درگیر", related_name="involved_user")
+    deadline = models.DateField(verbose_name="تاریخ پایان", auto_now=False, auto_now_add=False, null=True, blank=True)
+    
+    def __str__(self):
+        return self.project + " - " + str(self.deadline)
 
-{'update_id': 743952968,
-  'message': {
-        'message_id': 7871,
-        'date': 1601872075,
-        'chat': {
-            'id': -1001430882225,
-            'type': 'supergroup',
-            'title': 'ChamranTeam™ Coders'
-        },
-        'text': 'لیست فیلدهایی که علی آقا می\u200cگیره کارت رو راه می\u200cاندازه؟',
-        'entities': [],
-        'caption_entities': [],
-        'photo': [],
-        'new_chat_members': [],
-        'new_chat_photo': [],
-        'delete_chat_photo': False,
-        'group_chat_created': False,
-        'supergroup_chat_created': False,
-        'channel_chat_created': False,
-        'from': {
-            'id': 84588426,
-            'first_name': 'Sepehr',
-            'is_bot': False,
-            'last_name': 'Metanat',
-            'username': 'SepehrMetanat',
-            'language_code': 'en'
-        }
-    }
-}
-{'update_id': 743952969, 'message': {'message_id': 7872, 'date': 1601872147, 'chat': {'id': -1001430882225, 'type': 'supergroup', 'title': 'ChamranTeam™ Coders'}, 'text': 'هم اون رو می خوام', 'entities': [], 'caption_entities': [], 'photo': [], 'new_chat_members': [], 'new_chat_photo': [], 'delete_chat_photo': False, 'group_chat_created': False, 'supergroup_chat_created': False, 'channel_chat_created': False, 'from': {'id': 348489271, 'first_name': 'Reza', 'is_bot': False, 'last_name': 'Basereh', 'username': 'rezabasereh'}}}
+class Card(models.Model):
+    title = models.CharField(verbose_name="عنوان", max_length=256)
+    deadline = models.DateField(verbose_name="تاریخ پایان", auto_now=False, auto_now_add=False)
+    project = models.ForeignKey(Project,verbose_name="پروژه مرتبط",on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return self.project.str() + " - " + self.deadline
+    
