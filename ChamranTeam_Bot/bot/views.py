@@ -109,22 +109,28 @@ def telegramHandler(request):
     if update.message.entities:
         if update.message.entities[0].type == "bot_command":
             command = text[update.message.entities[0].offset:update.message.entities[0].offset+update.message.entities[0].length]
+            # the first time you chat with the bot AKA the welcoming message
             if text == "/start":
-                startHandler(chat_id=chat_id)
+                try:
+                    startHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
             elif text == "/all_task":
-                allTaskHandler(chat_id=chat_id)
+                try:
+                    allTaskHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
             elif text == "/my_colleague":
-                myColleagueHandler(chat_id=chat_id)
+                try:
+                    myColleagueHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
     if "کد پروژه" in text:
         projectId = text[text.find(":")+2:]
         # projectNameHandler(chat_id=chat_id, projectId=projectId)
     elif "شناسه" in text:
         keyword = text[text.find(":")+2:]
         # searchUsernameHandler(chat_id=chat_id, keyword=keyword)
-
-    # the first time you chat with the bot AKA the welcoming message
-    elif text == "/start":
-        startHandler(chat_id=chat_id)
 
     else:
         pass
