@@ -63,7 +63,7 @@ def inlineQuery(update):
     return
 
 def myColleagueHandler(chat_id):
-    project = models.Project.objects.get(group_id=chat_id)
+    project = models.Project.objects.get(group_id_set__in=[chat_id,])
     context = ""
     context += "مرکز پژوهشی : \n\t{}\n".format(project.industry_creator.fullname)
     context += "اساتید : \n"
@@ -162,11 +162,20 @@ def telegramHandler(request):
         if message.entities[0].type == "bot_command":
             command = text[message.entities[0].offset:message.entities[0].offset+message.entities[0].length]
             if text == "/start":
-                startHandler(chat_id=chat_id)
+                try:
+                    startHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
             elif text == "/all_task":
-                allTaskHandler(chat_id=chat_id)
+                try:
+                    allTaskHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
             elif text == "/my_colleague":
-                myColleagueHandler(chat_id=chat_id)
+                try:
+                    myColleagueHandler(chat_id=chat_id)
+                except:
+                    bot.sendMessage(chat_id=chat_id, text="با عرض پوزش درحال حاضر اطلاعاتی در دسترس نیست.")
 
     elif text == "/start":
         startHandler(chat_id=chat_id)
