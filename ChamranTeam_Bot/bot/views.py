@@ -41,7 +41,6 @@ def inlineQuery(update):
         projectId = update.inline_query.query
     except:
         raise Exception()
-    # response = requests.get("https://chamranteam.ir/api/project_name/{}".format(projectId))
     try:
         project = models.Project.objects.get(code=projectId)
     except:
@@ -49,14 +48,17 @@ def inlineQuery(update):
         return
     query = update.inline_query.query
     print("-----PROJECT----- : ",project)
+    keyboard = [[telegram.InlineKeyboardButton("تایید", callback_data=str(project.code))],]
+    reply_markup = telegram.InlineKeyboardMarkup(keyboard)
     results = [
         telegram.InlineQueryResultArticle(
             id=uuid.uuid4(),
             title=str(project.industry_creator),
             description=project.persian_title,
             thumb_url=project.industry_creator.photo_url,
+            reply_markup=reply_markup,
             input_message_content=telegram.InputTextMessageContent(
-                project.persian_title)),]
+                "آیا مایل به متصل کردن گروه به پروژه {} هستید؟".format(project.persian_title))),]
     update.inline_query.answer(results, cache_time=15)
     return
 
@@ -72,57 +74,100 @@ def myColleagueHandler(chat_id):
         context += "\t{}\n".format(researcher.fullname)
     bot.sendMessage(chat_id=chat_id, text=context)
 
+def addNewGroup(newMemberList, chat_id):
+    for newMember in newMemberList:
+        if newMember.username == "avatar_name_bot":
+            models.NewGroupId.objects.create(group_id=str(chat_id))
+
+def removeGroupHandler(removedMember, chat_id):
+    if removedMember.username == "avatar_name_bot":
+        try:
+            group = models.NewGroupId.objects.get(group_id=str(chat_id))
+            group.delete()
+        except:
+            try:
+                group = models.GroupId.objects.get(group_id=str(chat_id))
+                group.delete()
+            except:
+                pass
+
+def stageGroupAndProject(message):
+    for keyboardList in message.reply_markup.inline_keyboard:
+        for keyboard in keyboardList:
+            text = keyboard.text
+            if text == "تایید":
+                try:
+                    gp = models.NewGroupId.objects.get(group_id=message.chat.id)
+                    if gp.suggested_project is None:
+                        gp.suggested_project = keyboard.callback_data
+                        gp.save()
+                except:
+                    bot.send_message(chat_id=message.chat_id,
+                                     text="لطفا در ابتدا ربات چمران تیم را به گروه مرتبط به پروژه اضافه کنید.")
+            return HttpResponse("ok")
+
+def addGroupToProject(callBack):
+    code = callBack['data']
+    gp = models.NewGroupId.objects.get(suggested_project=code)
+    project = models.Project.objects.get(code=code)
+    group = models.GroupId.objects.create(group_id=gp.group_id, project=project)
+    gp.delete()
+    bot.send_message(chat_id=group.group_id,
+                        text="این گروه به پروژه {} متصل شد.".format(project.persian_title))
+    return HttpResponse("ok")
 
 def allTaskHandler(chat_id):
     return
 
 def startHandler(chat_id):
     bot_welcome = """
-       به بات تلگرامی چمران تیم خوش آمدید.
+       به ربات تلگرامی چمران تیم خوش آمدید.
        """
     bot.sendMessage(chat_id=chat_id, text=bot_welcome)
     return HttpResponse('ok')
 
 @csrf_exempt
 def telegramHandler(request):
-   # retrieve the message in JSON and then transform it to Telegram object
     if request.method == "GET":
        return HttpResponse("GET Method is OK")
     update = telegram.Update.de_json(json.loads(request.body), bot)
+    message = update.effective_message
     # print(update)
-    try:
-        inlineQuery(update)
+    # print("+++++++++++++=")
+    if message is None:
+        try:
+            inlineQuery(update)
+            return HttpResponse('ok')
+        except Exception as exc:
+            addGroupToProject(update.callback_query)
+            return HttpResponse("ok")
+
+    if message.reply_markup is not None:
+        stageGroupAndProject(message)
+
+    if len(message.new_chat_members):        
+        addNewGroup(newMemberList=message.new_chat_members, chat_id=message.chat_id)
         return HttpResponse('ok')
-    except Exception as exc:
-        pass
-        # print("---------------------------------------+++++++++++++++++++++++++++++++++")
-        # print(exc)
-        # return HttpResponse('ok')
+    if message.left_chat_member is not None:
+        removeGroupHandler(removedMember=message.left_chat_member, chat_id=message.chat_id)
+        return HttpResponse("ok")
     try:
-        chat_id = update.message.chat.id
-        msg_id = update.message.message_id
+        chat_id = message.chat.id
+        msg_id = message.message_id
     except:
         return HttpResponse("ok")
 
-    # Telegram understands UTF-8, so encode text for unicode compatibility    
-    text = update.message.text.encode('utf-8').decode()
-    if update.message.entities:
-        if update.message.entities[0].type == "bot_command":
-            command = text[update.message.entities[0].offset:update.message.entities[0].offset+update.message.entities[0].length]
+    text = message.text.encode('utf-8').decode()
+    if message.entities:
+        if message.entities[0].type == "bot_command":
+            command = text[message.entities[0].offset:message.entities[0].offset+message.entities[0].length]
             if text == "/start":
                 startHandler(chat_id=chat_id)
             elif text == "/all_task":
                 allTaskHandler(chat_id=chat_id)
             elif text == "/my_colleague":
                 myColleagueHandler(chat_id=chat_id)
-    if "کد پروژه" in text:
-        projectId = text[text.find(":")+2:]
-        # projectNameHandler(chat_id=chat_id, projectId=projectId)
-    elif "شناسه" in text:
-        keyword = text[text.find(":")+2:]
-        # searchUsernameHandler(chat_id=chat_id, keyword=keyword)
 
-    # the first time you chat with the bot AKA the welcoming message
     elif text == "/start":
         startHandler(chat_id=chat_id)
 
@@ -157,6 +202,7 @@ def add_user(userInfo):
                                             fullname=userInfo['fullname'],
                                             photo_url=userInfo['photo_url'],
                                             )[0]
+
 @csrf_exempt
 def addProject(request):
     inputData = json.loads(request.body)
@@ -195,8 +241,8 @@ def updateUser(request):
 def addTask(request):
     try:
         inputData = json.loads(request.body)
-        print("----------------------ADD TASK-------------------------")
-        print(inputData)
+        # print("----------------------ADD TASK-------------------------")
+        # print(inputData)
         project = models.Project.objects.get(id=inputData["id"])
         newTask = models.Task.objects.create(description=inputData['description'],
                                             project=project,
@@ -221,8 +267,8 @@ def addTask(request):
 def addCard(request):
     try:
         inputData = json.loads(request.body)
-        print("----------------------ADD CARD-------------------------")
-        print(inputData)
+        # print("----------------------ADD CARD-------------------------")
+        # print(inputData)
         project = models.Project.objects.get(id=inputData['id'])
         newCard = models.Card.objects.create(title=inputData['title'],
                                             project=project,
@@ -233,40 +279,3 @@ def addCard(request):
         return HttpResponse("OK")
     except:
         return HttpResponse("ERROR HAPPEND", status=503)
-
-
-# {'update_id': 743953184,
-#  'message': {
-#      'message_id': 208,
-#      'date': 1602089767,
-#      'chat': {
-#          'id': -408071125,
-#          'type': 'group',
-#          'title': 'Test',
-#          'all_members_are_administrators': True
-#          },
-#      'text': 'خهه',
-#      'entities': [],
-#      'caption_entities': [], 
-#      'photo': [], 
-#      'new_chat_members': [], 
-#      'new_chat_photo': [], 
-#      'from': {
-#          'id': 271373138, 
-#          'first_name': 'Ali', 
-#          'is_bot': False, 
-#          'last_name': 'Jafarzadeh', 'username': 'ali_jafarzadeh1998', 'language_code':'en'}}}
-
-
-# {'update_id': 743953185,
-#  'message': {
-#      'message_id': 209,
-#      'date': 1602089796, 
-#      'chat': {
-#          'id': -408071125, 
-#          'type': 'group', 
-#          'title': 'Test', 
-#          'all_members_are_administrators': True
-#          },
-#      'text': '/aloooooooooo',
-#      'entities': [{'type': 'bot_command', 'offset': 0, 'length': 13}], 'caption_entities': [], 'photo': [], 'new_chat_members': [], 'new_chat_photo': [], 'delete_chat_photo': False, 'group_chat_created': False, 'supergroup_chat_created': False, 'channel_chat_created': False, 'from': {'id': 271373138, 'first_name': 'Ali', 'is_bot': False, 'last_name': 'Jafarzadeh', 'username': 'ali_jafarzadeh1998', 'language_code': 'en'}}}

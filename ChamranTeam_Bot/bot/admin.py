@@ -7,3 +7,6 @@ admin.site.register(models.User)
 
 admin.site.register(models.Card)
 admin.site.register(models.Task)
+
+admin.site.register(models.GroupId)
+admin.site.register(models.NewGroupId)

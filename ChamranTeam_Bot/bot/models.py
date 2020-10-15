@@ -5,7 +5,7 @@ import uuid
 class User(models.Model):
     username = models.EmailField(verbose_name="ایمیل", max_length=256 )
     fullname = models.CharField(max_length=128, verbose_name="نام و نام خانوادگی")
-    photo_url = models.CharField(verbose_name="آدرس پروفایل", max_length=128, default="None")
+    photo_url = models.CharField(verbose_name="آدرس پروفایل", max_length=128, default="https://chamranteam.ir/static/img/profile.jpg")
 
     def __str__(self):
         return self.username
@@ -24,7 +24,6 @@ class Project(models.Model):
                                          null=True, blank=True, verbose_name='شرکت '
                                                                              'صاحب '
                                                                              'پروژه')
-    group_id = models.IntegerField(verbose_name="آیدی گروه", null=True, blank=True)
     def __str__(self):
         return self.english_title
 
@@ -36,7 +35,7 @@ class Task(models.Model):
     
     def __str__(self):
         return self.project + " - " + str(self.deadline)
-
+# -1001234159843
 class Card(models.Model):
     title = models.CharField(verbose_name="عنوان", max_length=256)
     deadline = models.DateField(verbose_name="تاریخ پایان", auto_now=False, auto_now_add=False)
@@ -45,3 +44,17 @@ class Card(models.Model):
     def __str__(self):
         return self.project.str() + " - " + self.deadline
     
+
+class NewGroupId(models.Model):
+    group_id = models.CharField(verbose_name="Id گروه تلگرام", max_length=256)
+    suggested_project = models.UUIDField(verbose_name="کد پروژه پیشنهادی", null=True, blank=True)
+
+    def __str__(self):
+        return self.group_id
+
+class GroupId(models.Model):
+    group_id = models.CharField(verbose_name="Id گروه تلگرام", max_length=256, null=True)
+    project = models.ForeignKey(Project, verbose_name="پروژه مرتبط", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.group_id + str(self.project)
